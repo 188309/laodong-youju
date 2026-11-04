@@ -1,23 +1,23 @@
-# 劳动有据 · 公开阅读版
+# 劳动有据：公开资料与匿名社区
 
-无需登录的静态公开页面。此版本用于先验证普通浏览器访问，不能代表已经验证中国大陆所有运营商网络可用。
+访问：https://188309.github.io/laodong-youju/
+社区：https://188309.github.io/laodong-youju/community.html
 
-## 已提供
+首页法律资料无须登录。社区支持匿名文字投稿、评论回复、公司/关键词/城市/类型搜索、审核状态、撤回与举报。
 
-- 自包含首页：样式、图形、交互均在同一个 HTML 文件中，不依赖 ChatGPT 域名、外部 CDN、Google 字体或远程 API。
-- 38 条带官方来源的精选劳动法律条款，可检索和展开阅读，保留原文、修订信息、核查日期及适用限制。
-- 官方人社、公共法律服务和法律法规数据库入口。
+## 架构与真实能力
 
-此入口没有投稿、账号、企业案例、文件上传或 AI 后端。页面明确说明功能状态，未使用虚构投稿、案例或统计数据。原全栈版本与此阅读版独立，不同步私人资料。
+- GitHub Pages 只托管前端，不能保存投稿。社区通过 HTTPS 调用劳动有据已有后端 `/api/community`，数据保存在 Cloudflare D1。
+- 后端地址：`https://laodong-youju.merrydune18.chatgpt.site`。网络必须能访问该域名；前端打开不代表后端一定可达。断网或接口失败时显示错误，不模拟成功或伪造故事。
+- 匿名社区使用独立的随机访问凭据，当前浏览器保留90天；恢复码365天。服务器只存哈希。匿名凭据无管理员及私密证据权限。
+- 投稿和评论先审核后公开；管理员使用原版网站的受控后台。审核不代表违法认定。撤回内容隐藏，审核记录保留。
+- 此入口仅接收脱敏文字；图片/视频上传、手机号认证、AI个案分析尚未接入。未承诺中国境内数据存储或全国网络可用性。
+- 内容默认没有种子数据、虚构用户或案例；只有真实审核通过的内容进入社区。
 
-## GitHub Pages 发布
+## 发布
 
-把 `index.html` 和 `.nojekyll` 放在公开仓库 `main` 分支根目录。在仓库 **Settings → Pages → Build and deployment** 中选择 **Deploy from a branch**，选择 `main` 和 `/ (root)` 并保存。以 GitHub Pages 返回的实际 URL 为准，不把预计地址当成已发布结果。
+保持 Pages 设置：Deploy from a branch → main → / (root)。根目录的 index.html、community.html、community.css、community.js 和 .nojekyll 用于实际访问。
 
-不需要安装依赖、运行工作流或填写 API 密钥。不要提交证据、身份证明、恢复码或其他秘密。
+`python build.py` 根据 template.html 与 law-sources.json 生成首页，同时将社区文件复制到 dist。不要编辑生成后的法条内容来冒充最新核查；资料核查日期见页面。
 
-## 维护
-
-`law-sources.json` 为带核查日期的既有资料，非实时法律数据库。更新资料后执行 `python build.py`，将生成的 `index.html` 一并提交。`template.html` 负责页面布局，`build.py` 将经 HTML 转义的条款写入页面。
-
-静态资源没有跨站依赖并不代表网络必然可达。发布后还需在大陆实际宽带和移动网络上打开完整页面；若不稳定，应进一步选择可用的独立域名或托管方案。GitHub Pages 不运行本项目原有的 Cloudflare Worker / D1 / R2 后端。
+源码不包含身份凭据、恢复码、用户投稿、私密材料或服务端密钥。社区后端独立部署，不能把后台密钥写入 JavaScript。修改域名需同步服务端精确 CORS 白名单。

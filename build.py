@@ -1,6 +1,7 @@
 """Build a standalone, backend-free public reading edition from the curated corpus."""
 import json
 import html
+import shutil
 from pathlib import Path
 
 root = Path(__file__).resolve().parent
@@ -20,4 +21,6 @@ dist = root / 'dist'
 dist.mkdir(exist_ok=True)
 (dist / 'index.html').write_text(page)
 (dist / '.nojekyll').write_text('')
+for name in ['community.html','community.css','community.js']:
+    shutil.copy2(root / name, dist / name)
 print(f'Built standalone index.html: {len(page.encode())} bytes, {len(cards)} sourced provisions')

@@ -21,6 +21,6 @@ dist = root / 'dist'
 dist.mkdir(exist_ok=True)
 (dist / 'index.html').write_text(page)
 (dist / '.nojekyll').write_text('')
-for name in ['community.html','community.css','community.js']:
+for name in ['community.html','community.css','community.js','community-cn.html','community-cn.js']:
     shutil.copy2(root / name, dist / name)
 print(f'Built standalone index.html: {len(page.encode())} bytes, {len(cards)} sourced provisions')

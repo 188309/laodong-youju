@@ -18,7 +18,23 @@ async function api(path,{method='GET',data,anonymous=false}={}){
  let res;try{res=await fetch(API+'/'+path,{method,headers,body:data?JSON.stringify(data):undefined,credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(18000)});}catch{connection(false);throw Error('社区服务暂时无法连接。已输入的文字保留在当前页面，尚未确认保存，请稍后重试。');}
  let result;try{result=await res.json();}catch{connection(false);throw Error('社区服务返回异常，请保留文字后重试。');}
  if(res.status===401){remember('');state.user=null;}
- if(!res.ok)throw Error(result.error||'请求未完成，请稍后重试');connection(true);return result;
+ if(!res.ok){const error=Error(result.error||'请求未完成，请稍后重试');error.status=res.status;throw error;}connection(true);return result;
+}
+async function checkConnection(){
+ notice('正在检查社区读取和提交连接…');
+ try{
+  await api('health',{anonymous:true});
+  try{
+   // Explicitly decline consent: the backend must reject this before any
+   // identity/database write. JSON POST also exercises browser preflight.
+   await api('session',{method:'POST',data:{accepted:false},anonymous:true});
+   throw Error('身份保护检查返回异常，请暂缓投稿并联系管理员。');
+  }catch(error){
+   if(error.status!==400||error.message!=='请先阅读并同意社区规则与隐私说明')throw error;
+  }
+  connection(true);
+  notice('读取和提交连接检查通过；未创建匿名身份、未发布内容。实际投稿仍需本人确认并提交审核。');
+ }catch(error){connection(false);throw error;}
 }
 function openDialog(title,html){$('#dialog-title').textContent=title;$('#dialog-content').innerHTML=html;if(!dialog.open)dialog.showModal();}
 function empty(title,text,button=''){return `<div class="empty"><h3>${esc(title)}</h3><p>${esc(text)}</p>${button}</div>`;}
@@ -44,7 +60,7 @@ document.addEventListener('input',e=>{if(e.target.closest('#post-form')){state.d
 document.addEventListener('submit',e=>{const form=e.target;e.preventDefault();const data=Object.fromEntries(new FormData(form));if(form.id==='filter-form'){state.query=data.q;state.category=data.category;state.city=data.city;busy(form,()=>loadFeed());}else if(form.id==='post-form'){state.draft={...state.draft,...data};preview();}else if(form.id==='publish-form'){const submittedDraft={...state.draft};requireIdentity(()=>busy(form,async()=>{const result=await api('posts',{method:'POST',data:{...submittedDraft,confirmed:true,previewed:true}});state.draft=null;notice(result.message);location.hash='mine';}));}else if(form.id==='identity-form'){busy(form,async()=>{const result=await api(form.dataset.mode==='restore'?'restore':'session',{method:'POST',data:{...data,accepted:data.accepted==='on'},anonymous:true});remember(result.token);state.user=result.user;if(result.recoveryCode){state.recovery=result.recoveryCode;openDialog('请保存你的恢复码',`<p>以后换设备、清除浏览器数据或退出后，用它找回投稿。</p><p class="secret">${esc(result.recoveryCode)}</p><div class="hint warning">只显示这一次。任何持有此码的人都能管理你的内容，请勿分享。有效至 ${date(result.recoveryExpiresAt)}。</div><button class="button primary" data-action="identity-done">我已保存，继续</button>`);}else{openDialog('匿名身份已恢复','<p>其他设备的社区凭据已退出。你可以继续刚才的操作。</p><button class="button primary" data-action="identity-done">继续</button>');}});}else if(form.id==='comment-form'){requireIdentity(()=>busy(form,async()=>{const result=await api('posts/'+state.post.post.id+'/comments',{method:'POST',data:{requestId:state.commentRequestId||(state.commentRequestId=uuid()),body:state.commentDraft,parentId:state.reply?.id||null}});state.commentRequestId=null;state.commentDraft='';state.reply=null;notice(result.message);await loadPost(state.post.post.id);}));}else if(form.id==='report-form'){busy(form,async()=>{const result=await api('reports',{method:'POST',data:{...data,postId:form.dataset.id}});dialog.close();notice(result.message);});}else if(form.id==='profile-form'){busy(form,async()=>{await api('profile',{method:'PATCH',data});dialog.close();notice('昵称已更新。');await mine();});}});
 document.addEventListener('click',async e=>{const button=e.target.closest('[data-action]');if(!button)return;const action=button.dataset.action;try{
  if(action==='compose'){location.hash='compose';if(location.hash==='#compose')compose();}
- else if(action==='refresh')await route();else if(action==='more-posts')await busy(button.parentElement,()=>loadFeed(true));else if(action==='more-comments')await busy(button.parentElement,()=>loadPost(state.post.post.id,true));
+ else if(action==='refresh')await route();else if(action==='check-connection')await busy(button.parentElement,checkConnection);else if(action==='more-posts')await busy(button.parentElement,()=>loadFeed(true));else if(action==='more-comments')await busy(button.parentElement,()=>loadPost(state.post.post.id,true));
  else if(action==='rules')openDialog('社区规则与隐私说明',rulesHTML());else if(action==='close-dialog'){state.pendingAction=null;dialog.close();}
  else if(action==='identity-create')consentForm();else if(action==='identity-restore')consentForm('restore');
  else if(action==='identity-done'){dialog.close();state.recovery='';const fn=state.pendingAction;state.pendingAction=null;if(fn)await fn();else await route();}
